@@ -27,7 +27,7 @@
 //#endregion
 
 
-const playgroundId = "#2KRNG9#4"
+const playgroundId = "#20OAV9#6274"
 
 const createScene = () => {
     if (playgroundId[0] !== "#") {
@@ -101,8 +101,21 @@ const createScene = () => {
 
             console.log(`Creating scene ...`)
             console.log(code)
-            currentScene = eval(code + "\r\ncreateScene(engine)")
-            console.log(`Creating scene - done`)
+            const createdScene = eval(code + "\r\ncreateScene(engine)")
+
+            // If the `createScene` function returned a promise, wait for it before setting `currentScene`.
+            if (!!createdScene.then) {
+                createdScene.then((scene) => {
+                    currentScene = scene
+                    console.log(`Creating scene (async) - done`)
+                })
+            }
+            else {
+                // The `createScene` function did not return a promise so assume `createdScene` is a valid Babylon.js
+                // scene.
+                currentScene = createdScene
+                console.log(`Creating scene - done`)
+            }
         }
         catch(e) {
             console.log(e)
