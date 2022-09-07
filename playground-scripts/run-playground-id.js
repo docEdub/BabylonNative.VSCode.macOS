@@ -29,6 +29,7 @@
 
 const playgroundId = "#20OAV9#6274"
 
+
 const createScene = () => {
     if (playgroundId[0] !== "#") {
         console.error("Invalid playground id")
@@ -107,12 +108,11 @@ const createScene = () => {
             if (!!createdScene.then) {
                 createdScene.then((scene) => {
                     currentScene = scene
-                    console.log(`Creating scene (async) - done`)
+                    console.log(`Creating scene - done (async)`)
                 })
             }
             else {
-                // The `createScene` function did not return a promise so assume `createdScene` is a valid Babylon.js
-                // scene.
+                // The `createScene` function did not return a promise so assume `createdScene` is a Babylon.js scene.
                 currentScene = createdScene
                 console.log(`Creating scene - done`)
             }
