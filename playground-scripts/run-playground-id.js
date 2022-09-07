@@ -27,111 +27,91 @@
 //#endregion
 
 
-const playgroundId = `#2KRNG9`
-
-
-let canvas = null
-let currentScene = null
+const playgroundId = "#2KRNG9#4"
 
 const createScene = () => {
     if (playgroundId[0] !== "#") {
-        console.error("Invalid playground id");
-        return;
+        console.error("Invalid playground id")
+        return
     }
 
-    var playgroundUrl = "https://playground.babylonjs.com";
-    var snippetUrl = "https://snippet.babylonjs.com";
+    // Need a dummy canvas for the `camera.attachControl` call used in most playgrounds.
+    // NB: The `camera.attachControl` `canvas` argument is not used anymore, so leaving it set to `null` is ok.
+    let canvas = null
 
-    var retryTime = 500;
-    var maxRetry = 0;
-    var retry = 0;
+    let currentScene = null
 
-    var onError = function () {
-        retry++;
-        if (retry < maxRetry) {
-            setTimeout(function () {
-                loadPG();
-            }, retryTime);
+    class Response {
+        constructor(text) {
+            this._text = text
         }
-        else {
-            // Skip the test as we can not fetch the source.
-            done(true);
+
+        text = () => {
+            return this._text
         }
     }
 
-    const evalCodeAndCreateScene = (code) => {
-        console.log(`Creating scene ...`)
-        console.log(`${code}`)
-        currentScene = eval(code + "\r\ncreateScene(engine)");
-        console.log(`Creating scene - done`)
-    }
+    const fetch = async (url) => {
+        console.log(`Loading url ${url} ...`)
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest
 
-    var loadPG = function () {
-        console.log(`Loading playground id ${playgroundId} ...`)
-        var xmlHttp = new XMLHttpRequest();
-        xmlHttp.addEventListener("readystatechange", function () {
-            if (xmlHttp.readyState === 4) {
-                try {
-                    console.log(`Loading playground id ${playgroundId} - done`)
-                    xmlHttp.onreadystatechange = null;
-                    var snippet = JSON.parse(xmlHttp.responseText);
-                    var code = JSON.parse(snippet.jsonPayload).code.toString();
-                    code = code.replace(/\/textures\//g, playgroundUrl + "/textures/");
-                    code = code.replace(/"textures\//g, "\"" + playgroundUrl + "/textures/");
-                    code = code.replace(/\/scenes\//g, playgroundUrl + "/scenes/");
-                    code = code.replace(/"scenes\//g, "\"" + playgroundUrl + "/scenes/");
+            xhr.addEventListener("readystatechange", () => {
+                if (xhr.readyState === 4) {
+                    xhr.onreadystatechange = null
 
-                    // Loads and evaluates Assets.js from https://assets.babylonjs.com/generated/Assets.js.
-                    // This adds variable `const Assets = ...` to the `createScene` scope which is used in playgrounds
-                    // like #2KRNG9#4.
-                    const loadAssetsAndCreateScene = () => {
-                        console.log(`Loading assets ...`)
-                        let xmlHttp = new XMLHttpRequest
-                        xmlHttp.addEventListener("readystatechange", () => {
-                            if (xmlHttp.readyState === 4) {
-                                try {
-                                    xmlHttp.onreadystatechange = null
-                                    eval(xmlHttp.responseText)
-                                    console.log(`Loading assets - done`)
-                                    evalCodeAndCreateScene(code)
-                                }
-                                catch (e) {
-                                    console.error(e)
-                                    onError()
-                                }
-                            }
-                        })
-                        xmlHttp.onerror = () => {
-                            console.error("Network error during assets load.")
-                            onError()
-                        }
-                        xmlHttp.open("GET", "https://assets.babylonjs.com/generated/Assets.js")
-                        xmlHttp.send()
-                    }
-                    if (code.indexOf(`Assets`) != -1) {
-                        loadAssetsAndCreateScene()
-                    }
-                    else {
-                        evalCodeAndCreateScene(code)
-                    }
+                    const response = new Response(xhr.responseText)
+
+                    console.log(`Loading url ${url} - done`)
+                    resolve(response)
                 }
-                catch (e) {
-                    console.error(e);
-                    onError();
-                }
+            })
+
+            xhr.onerror = () => {
+                console.log(`Loading url ${url} - failed`)
+                reject()
             }
-        }, false);
-        xmlHttp.onerror = function () {
-            console.error("Network error during test load.");
-            onError();
-        }
-        xmlHttp.open("GET", snippetUrl + playgroundId.replace(/#/g, "/"));
-        xmlHttp.send();
-    }
-    loadPG();
 
+            xhr.open("GET", url)
+            xhr.send()
+        })
+    }
+
+    const assetsUrl = "https://assets.babylonjs.com/generated/Assets.js"
+    const playgroundUrl = "https://playground.babylonjs.com"
+    const snippetUrl = "https://snippet.babylonjs.com"
+
+    var loadPG = async () => {
+        console.log(`Loading playground id ${playgroundId} ...`)
+
+        try {
+            const response = await fetch(snippetUrl + playgroundId.replace(/#/g, "/"))
+            let code = JSON.parse(JSON.parse(response.text()).jsonPayload).code.toString()
+            code = code.replace(/\/textures\//g, playgroundUrl + "/textures/")
+            code = code.replace(/"textures\//g, "\"" + playgroundUrl + "/textures/")
+            code = code.replace(/\/scenes\//g, playgroundUrl + "/scenes/")
+            code = code.replace(/"scenes\//g, "\"" + playgroundUrl + "/scenes/")
+
+            if (code.includes("Assets")) {
+                // Load and evaluate Assets.js from https://assets.babylonjs.com/generated/Assets.js to add variable
+                // `const Assets = ...` to the `createScene` scope which is used in playgrounds like #2KRNG9#4.
+                const response = await fetch(assetsUrl)
+                eval(response.text())
+            }
+
+            console.log(`Creating scene ...`)
+            console.log(code)
+            currentScene = eval(code + "\r\ncreateScene(engine)")
+            console.log(`Creating scene - done`)
+        }
+        catch(e) {
+            console.log(e)
+        }
+    }
+    loadPG()
+
+    // Dummy scene that does nothing in its `render` function until the given playground is fetched and loaded.
     const scene = {
-        frameCount: 0,
         render: () => {
             if (!!currentScene) {
                 currentScene.render()
