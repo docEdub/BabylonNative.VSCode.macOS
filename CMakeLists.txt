@@ -2,6 +2,9 @@
 cmake_minimum_required(VERSION 3.18)
 project(BabylonNative.vscode)
 
+# This is needed to build the Playground app.
+set(BABYLON_NATIVE_BUILD_APPS ON)
+
 add_subdirectory("BabylonNative")
 
 set_property(TARGET Playground PROPERTY XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "${BABYLON_NATIVE_PLAYGROUND_IOS_PRODUCT_BUNDLE_IDENTIFIER}")
